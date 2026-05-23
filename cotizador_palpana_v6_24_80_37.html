@@ -3378,7 +3378,7 @@ async function analizarExcelImagen(base64, mimeType){
       return;
     }
 
-    var prompt='Eres un extractor de datos de cotizaciones de neumáticos. Se te entrega una imagen de una planilla Excel de proveedores. Tu tarea es extraer los datos de CADA FILA como un ítem separado.\n\nESTRUCTURA TÍPICA DE COLUMNAS (de izquierda a derecha):\n  Col 1: PRODUCTO — nombre/descripción del neumático. Puede contener múltiples modelos apilados verticalmente separados por línea.\n  Col 2: COD PRODUCTO — código numérico de 5-6 dígitos (ej: 200415, 200058). UNO POR LÍNEA, correspondiente a cada modelo en Col 1.\n  Col 3: BODEGA / LUGAR STOCK — código o nombre de bodega (puede repetir el código de producto o ser texto).\n  Col 4: BODEGA DEST / COD DESTINO — código o nombre secundario de bodega.\n  Col 5: SERVICIOS — texto con servicios incluidos (ej: 1A4M4B).\n  Col 6: LUGAR DESPACHO — ciudad o dirección de entrega (ej: CHILLAN).\n  Col 7: PRECIO — número con formato chileno (ej: $ 55.693 → 55693). HAY UN PRECIO POR CADA MODELO de Col 1.\n  Col 8: PRECIO SERVICIOS — texto con descripción de servicios y sus precios.\n  Col 9: PRECIO FLETE — valor de flete.\n  Col 10: PLAZO — número de días de entrega.\n\nREGLAS CRÍTICAS:\n- Si Col 1 tiene N modelos apilados verticalmente, habrá N códigos en Col 2 y N precios en Col 7, en el mismo orden vertical.\n- NUNCA uses texto del modelo como SKU. SKU = número de 5-6 dígitos de Col 2 ÚNICAMENTE.\n- Correspondencia estricta posición a posición: modelo[0]↔sku[0]↔precio[0], modelo[1]↔sku[1]↔precio[1].\n- PRECIO SERVICIOS, SERVICIOS y PLAZO suelen ser iguales para todas las alternativas del mismo ítem — repítelos.\n- precio = número entero sin puntos ni $. Si no se ve, usa 0.\n- Campos ausentes = cadena vacía.\n- Responde SOLO JSON válido, sin markdown, sin texto extra.\n\nFormato exacto:\n{"items":[{"item":1,"alts":[{"modelo":"NEUMA 245/70R16 111T GIANTSAVER MAZZINI","sku":"200415","lugar":"200415","servicios_cant":"1A4M4B","lugar_desp":"CHILLAN","precio":55693,"servicio":"promo montaje liviano: 10.000, alineación camioneta: 16.655","flete":"","plazo_estimado":"3"},{"modelo":"NEUMA 245/70R16 10PR 118/115Q SL369","sku":"200058","lugar":"200058","servicios_cant":"1A4M4B","lugar_desp":"CHILLAN","precio":72360,"servicio":"promo montaje liviano: 10.000, alineación camioneta: 16.655","flete":"","plazo_estimado":"3"}]}]}';
+    var prompt='Eres un extractor de datos de cotizaciones de neumáticos. Se te entrega una imagen de una planilla Excel de proveedores. Tu tarea es extraer los datos de CADA FILA como un ítem separado.\n\nESTRUCTURA TÍPICA DE COLUMNAS (de izquierda a derecha):\n  Col 1: PRODUCTO — nombre/descripción del neumático. Puede contener múltiples modelos apilados verticalmente separados por línea.\n  Col 2: COD PRODUCTO — código numérico de 5-6 dígitos (ej: 200415, 200058). UNO POR LÍNEA, correspondiente a cada modelo en Col 1.\n  Col 3: BODEGA / LUGAR STOCK — código o nombre de bodega (puede repetir el código de producto o ser texto).\n  Col 4: BODEGA DEST / COD DESTINO — código o nombre secundario de bodega.\n  Col 5: SERVICIOS — texto con servicios incluidos (ej: 1A4M4B).\n  Col 6: LUGAR DESPACHO — ciudad o dirección de entrega (ej: CHILLAN).\n  Col 7: PRECIO — número con formato chileno (ej: $ 55.693 → 55693). HAY UN PRECIO POR CADA MODELO de Col 1.\n  Col 8: PRECIO SERVICIOS — texto con descripción de servicios y sus precios.\n  Col 9: PRECIO FLETE — valor de flete.\n  Col 10: PLAZO — número de días de entrega.\n\nREGLAS CRÍTICAS:\n- REGLA FUNDAMENTAL: cada FILA HORIZONTAL separada visualmente es un ITEM DISTINTO. Solo son ALTERNATIVAS del mismo item si estan apiladas verticalmente DENTRO de la misma celda de la Col 1 (sin separacion de fila).\n- Si Col 1 tiene N modelos apilados DENTRO de una celda, habra N codigos en Col 2 y N precios en Col 7, en el mismo orden.\n- NUNCA uses texto del modelo como SKU. SKU = número de 5-6 dígitos de Col 2 ÚNICAMENTE.\n- Correspondencia estricta posición a posición: modelo[0]↔sku[0]↔precio[0], modelo[1]↔sku[1]↔precio[1].\n- PRECIO SERVICIOS, SERVICIOS y PLAZO suelen ser iguales para todas las alternativas del mismo ítem — repítelos.\n- precio = número entero sin puntos ni $. Si no se ve, usa 0.\n- Campos ausentes = cadena vacía.\n- Responde SOLO JSON válido, sin markdown, sin texto extra.\n\nFormato exacto:\n{"items":[{"item":1,"alts":[{"modelo":"NEUMA 245/70R16 111T GIANTSAVER MAZZINI","sku":"200415","lugar":"200415","servicios_cant":"1A4M4B","lugar_desp":"CHILLAN","precio":55693,"servicio":"promo montaje liviano: 10.000, alineación camioneta: 16.655","flete":"","plazo_estimado":"3"},{"modelo":"NEUMA 245/70R16 10PR 118/115Q SL369","sku":"200058","lugar":"200058","servicios_cant":"1A4M4B","lugar_desp":"CHILLAN","precio":72360,"servicio":"promo montaje liviano: 10.000, alineación camioneta: 16.655","flete":"","plazo_estimado":"3"}]}]}';
 
     statusEl.innerHTML='<span style="color:#b87800">&#9679; Comprimiendo imagen...</span>';
     var comprimido=await comprimirImgBase64(base64,mimeType);
@@ -3436,7 +3436,10 @@ function mostrarPreviewExcel(parsed){
         +(ai>0?'<button onclick="epMover('+ii+','+ai+',-1)" style="font-size:10px;padding:1px 5px;border:1px solid #8a929c;border-radius:3px;background:#eef0f3;cursor:pointer;line-height:1.2">&#8593;</button>':'')
         +(ai<it.alts.length-1?'<button onclick="epMover('+ii+','+ai+',1)" style="font-size:10px;padding:1px 5px;border:1px solid #8a929c;border-radius:3px;background:#eef0f3;cursor:pointer;line-height:1.2">&#8595;</button>':'')
         +'</div>';
-      var del='<button onclick="epEliminar('+ii+','+ai+')" style="font-size:11px;padding:3px 7px;border:1px solid rgba(198,40,40,.3);border-radius:4px;color:#c62828;background:transparent;cursor:pointer;flex-shrink:0">&#10005;</button>';
+      var del='<div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0">'
+        +(item.alts.length>1?'<button onclick="epSepararItem('+ii+','+ai+')" title="Separar como ítem nuevo" style="font-size:9px;padding:2px 6px;border:1px solid rgba(184,120,0,.4);border-radius:3px;color:#b87800;background:transparent;cursor:pointer;white-space:nowrap">&#8599; Ítem</button>':'')
+        +'<button onclick="epEliminar('+ii+','+ai+')" style="font-size:11px;padding:3px 7px;border:1px solid rgba(198,40,40,.3);border-radius:4px;color:#c62828;background:transparent;cursor:pointer">&#10005;</button>'
+        +'</div>';
       function lbl(t){return '<span style="font-size:9px;color:#333333;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:2px">'+t+'</span>';}
       function cell(lbTxt,inp){return '<div style="display:flex;flex-direction:column;min-width:0">'+lbl(lbTxt)+inp+'</div>';}
       // Fila 1: ↑↓ | MODELO(flex) | SKU | PRECIO UNIT | ✕
@@ -3486,6 +3489,24 @@ function epAgregarAlt(ii){
   var item=_excelParsed.items[ii];if(!item)return;
   item.alts.push({modelo:'',sku:'',precio:0,servicio:''});
   mostrarPreviewExcel(_excelParsed);
+}
+
+function epSepararItem(ii,ai){
+  var item=_excelParsed.items[ii];if(!item||item.alts.length<=1)return;
+  var alt=item.alts.splice(ai,1)[0];
+  var newItem={item:_excelParsed.items.length+1,alts:[alt]};
+  _excelParsed.items.splice(ii+1,0,newItem);
+  mostrarPreviewExcel(_excelParsed);
+  showToast('Alternativa separada como ítem '+(ii+2),'ok');
+}
+
+function epSepararItem(ii,ai){
+  var item=_excelParsed.items[ii];if(!item||item.alts.length<=1)return;
+  var alt=item.alts.splice(ai,1)[0];
+  var newItem={item:_excelParsed.items.length+1,alts:[alt]};
+  _excelParsed.items.splice(ii+1,0,newItem);
+  mostrarPreviewExcel(_excelParsed);
+  showToast('Alternativa separada como ítem '+(ii+2),'ok');
 }
 
 function aplicarExcelData(){
